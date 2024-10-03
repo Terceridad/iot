@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    environment:
+      - POSTGRES_DB=healthdb
+      - POSTGRES_USER=healthuser
+      - POSTGRES_PASSWORD=healthpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U healthuser -d healthdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mqtt_extractor:
+    build: .
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      - MQTT_BROKER=mqtt.eclipseprojects.io
+      - MQTT_PORT=1883
+      - DB_NAME=healthdb
+      - DB_USER=healthuser
+      - DB_PASSWORD=healthpass
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+
+volumes:
+  timescaledb_data:
